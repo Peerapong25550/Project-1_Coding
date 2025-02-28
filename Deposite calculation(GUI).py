@@ -1,160 +1,225 @@
 import tkinter as tk
-from tkinter import messagebox
-from tkinter import ttk
+from tkinter import ttk, messagebox
+from datetime import datetime
 
-# Function to check if the date is valid and ensure the correct format
-def check_date_format(time_in, time_out):
-    date_in = list(map(int, time_in.split("/")))
-    date_out = list(map(int, time_out.split("/")))
-
-    for i in range(2, 0, -1):
-        if date_in[i] < date_out[i]:
-            return True
-        elif date_in[i] == date_out[i]:
-            continue
-        else:
-            return False
-
-# Function to check if a year is a leap year
-def check_leap_year(year):
-    if year % 4 == 0:
-        if year % 100 == 0:
-            if year % 400 == 0:
-                return True
-            else:
-                return False
-        else:
-            return True
-    else:
-        return False
-
-# Function to calculate the number of days between two dates
-def calculate_days(date_in, date_out):
-    month_day = {
-        1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30,
-        7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31
-    }
-
-    day_count = 0
-
-    # Check if the dates are within the same year
-    if date_in[2] == date_out[2]:
-        for i in range(date_in[1], date_out[1]):
-            if check_leap_year(date_in[2]) and i == 2:
-                day_count += 1
-            day_count += month_day[i]
-        day_count -= date_in[0]
-        day_count += date_out[0]
+# คลาสสำหรับสร้าง Entry ที่มีกรอบขอบมน สีขาว โดยไม่มีเส้นสีดำ
+class RainbowRoundedEntry(tk.Frame):
+    def __init__(self, parent, width=300, height=70, corner_radius=15, **kwargs):
+        tk.Frame.__init__(self, parent, bg=parent['bg'])
+        self.width = width
+        self.height = height
+        self.corner_radius = corner_radius
+        # Canvas ที่มีพื้นหลังสีขาวและไม่มีเส้นขอบ
+        self.canvas = tk.Canvas(self, width=width, height=height, bg="white", highlightthickness=0, bd=0)
+        self.canvas.pack()
+        self.draw_white_border(width, height, corner_radius)
+        # สร้าง Entry โดยไม่มี border และ relief="flat"
+        self.entry = tk.Entry(self, bd=0, relief="flat", font=("ไทยสารบัญ", 18), bg="white", fg="black", **kwargs)
+        self.canvas.create_window(corner_radius, corner_radius, anchor="nw", 
+                                  window=self.entry, width=width - 2*corner_radius, height=height - 2*corner_radius)
     
-    else:
-        # Calculate days left in the start year
-        for i in range(date_in[1], 13):
-            day_count += month_day[i]
-            if check_leap_year(date_in[2]) and i == 2:
-                day_count += 1
-        day_count -= date_in[0] - 1
-
-        # Calculate days in the years between the start and end year
-        for i in range(date_in[2] + 1, date_out[2]):
-            for j in range(1, 13):
-                if j == 2 and check_leap_year(i):
-                    day_count += 1
-                day_count += month_day[j]
-
-        # Calculate days in the end year
-        for i in range(1, date_out[1]):
-            day_count += month_day[i]
-            if check_leap_year(date_out[2]) and i == 2:
-                day_count += 1
-        day_count += date_out[0]
-
-    return day_count
-
-# Function to calculate the interest based on the capital and time period
-def calculate_interest(capital, days):
-    if capital <= 10000:
-        interest_rate = 0.03
-    elif capital <= 1000000:
-        interest_rate = 0.015
-    else:
-        interest_rate = 0.0005
+    def draw_white_border(self, width, height, radius):
+        # วาดกรอบขอบมนโดยใช้ความหนาของเส้นเป็น 1 px
+        self.round_rect(self.canvas, 0, 0, width, height, radius, outline="white", width=1, fill="white")
     
-    return capital * interest_rate * (days / 365)
+    def round_rect(self, canvas, x1, y1, x2, y2, radius, **kwargs):
+        points = [
+            x1+radius, y1,
+            x2-radius, y1,
+            x2, y1,
+            x2, y1+radius,
+            x2, y2-radius,
+            x2, y2,
+            x2-radius, y2,
+            x1+radius, y2,
+            x1, y2,
+            x1, y2-radius,
+            x1, y1+radius,
+            x1, y1,
+        ]
+        return canvas.create_polygon(points, smooth=True, **kwargs)
 
-# Function to handle the calculation when the user presses the button
-def calculate():
+# คลาสสำหรับสร้าง Combobox ที่มีกรอบขอบมน สีขาว โดยไม่มีเส้นสีดำ
+class RainbowRoundedCombobox(tk.Frame):
+    def __init__(self, parent, values, width=100, height=70, corner_radius=15, **kwargs):
+        tk.Frame.__init__(self, parent, bg=parent['bg'])
+        self.width = width
+        self.height = height
+        self.corner_radius = corner_radius
+        # Canvas ที่มีพื้นหลังสีขาวและไม่มีเส้นขอบ
+        self.canvas = tk.Canvas(self, width=width, height=height, bg="white", highlightthickness=0, bd=0)
+        self.canvas.pack()
+        self.draw_white_border(width, height, corner_radius)
+        self.combobox = ttk.Combobox(self, values=values, font=("ไทยสารบัญ", 18), state="readonly", **kwargs)
+        self.canvas.create_window(corner_radius, corner_radius, anchor="nw", 
+                                  window=self.combobox, width=width - 2*corner_radius, height=height - 2*corner_radius)
+    
+    def draw_white_border(self, width, height, radius):
+        self.round_rect(self.canvas, 0, 0, width, height, radius, outline="white", width=1, fill="white")
+    
+    def round_rect(self, canvas, x1, y1, x2, y2, radius, **kwargs):
+        points = [
+            x1+radius, y1,
+            x2-radius, y1,
+            x2, y1,
+            x2, y1+radius,
+            x2, y2-radius,
+            x2, y2,
+            x2-radius, y2,
+            x1+radius, y2,
+            x1, y2,
+            x1, y2-radius,
+            x1, y1+radius,
+            x1, y1,
+        ]
+        return canvas.create_polygon(points, smooth=True, **kwargs)
+
+def is_leap(year):
+    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+
+def update_day_options(day_widget, month_widget, year_widget):
     try:
-        capital = float(entry_capital.get().replace(",", ""))  # Remove commas before converting to float
-        time_in = entry_time_in.get()
-        time_out = entry_time_out.get()
-
-        # Validate the date format and input
-        if not check_date_format(time_in, time_out):
-            messagebox.showerror("Invalid Input", "กรุณาเช็ควันเดือนปีให้ถูกต้อง และกรอกข้อมูลใหม่ ตามรูปแบบ วว/ดด/ปปปป")
-            return
-
-        # Convert the date string to lists of integers
-        date_in = [int(time_in[0:2]), int(time_in[3:5]), int(time_in[6:10])]
-        date_out = [int(time_out[0:2]), int(time_out[3:5]), int(time_out[6:10])]
-
-        # Calculate the number of days between the dates
-        days = calculate_days(date_in, date_out)
-
-        # Calculate the interest earned
-        total_amount = capital + calculate_interest(capital, days)
-
-        # Format capital and result to include commas
-        formatted_capital = "{:,.2f}".format(capital)
-        formatted_result = "{:,.2f}".format(total_amount)
-
-        # Show the result
-        result_label.config(text=f"ยอดเงินทั้งหมด: {formatted_result} บาท")
-        entry_capital.delete(0, tk.END)  # Clear the entry field after calculation
-        entry_capital.insert(0, formatted_capital)  # Reinsert the formatted capital with commas
-
+        month = int(month_widget.combobox.get())
+        year = int(year_widget.combobox.get())
     except ValueError:
-        messagebox.showerror("Invalid Input", "กรุณากรอกข้อมูลให้ถูกต้อง (เช่น จำนวนเงินต้องเป็นตัวเลข)")
+        return
+    if month in [1, 3, 5, 7, 8, 10, 12]:
+        days = 31
+    elif month in [4, 6, 9, 11]:
+        days = 30
+    elif month == 2:
+        days = 29 if is_leap(year) else 28
+    else:
+        days = 31
+    day_values = [str(i) for i in range(1, days + 1)]
+    day_widget.combobox['values'] = day_values
+    try:
+        current_day = int(day_widget.combobox.get())
+    except ValueError:
+        current_day = 1
+    if current_day > days:
+        day_widget.combobox.set(str(days))
 
-# Create the main window
+def update_day_in(event=None):
+    update_day_options(day_in_widget, month_in_widget, year_in_widget)
+
+def update_day_out(event=None):
+    update_day_options(day_out_widget, month_out_widget, year_out_widget)
+
+def calculate_interest():
+    try:
+        capital = float(rainbow_entry_capital.entry.get())
+    except ValueError:
+        messagebox.showerror("ข้อผิดพลาด", "กรุณากรอกจำนวนเงินเป็นตัวเลข")
+        return
+
+    try:
+        d_in = int(day_in_widget.combobox.get())
+        m_in = int(month_in_widget.combobox.get())
+        y_in = int(year_in_widget.combobox.get())
+        date_in = datetime(y_in, m_in, d_in)
+    except ValueError:
+        messagebox.showerror("ข้อผิดพลาด", "กรุณาเลือกวันที่นำเงินเข้าให้ถูกต้อง")
+        return
+
+    try:
+        d_out = int(day_out_widget.combobox.get())
+        m_out = int(month_out_widget.combobox.get())
+        y_out = int(year_out_widget.combobox.get())
+        date_out = datetime(y_out, m_out, d_out)
+    except ValueError:
+        messagebox.showerror("ข้อผิดพลาด", "กรุณาเลือกวันที่นำเงินออกให้ถูกต้อง")
+        return
+
+    if date_out <= date_in:
+        messagebox.showerror("ข้อผิดพลาด", "วันที่นำออกต้องมากกว่าวันที่นำเข้า")
+        return
+
+    day_diff = (date_out - date_in).days
+
+    if capital <= 10000:
+        interest = 0.03
+    elif capital <= 1000000:
+        interest = 0.015
+    else:
+        interest = 0.0005
+
+    final_amount = capital + (capital * interest * (day_diff / 365))
+    result_label.config(text=f"คุณจะมีเงินรวมทั้งสิ้น {final_amount:.2f} บาท")
+
+# ซ่อนหน้าต่างหลักก่อนสร้าง UI
 root = tk.Tk()
-root.title("Deposite Calculation")
-root.geometry("400x450")  # Set a fixed window size
+root.withdraw()
 
-# Styling with ttk
-style = ttk.Style()
-style.configure("TLabel", font=("Arial", 12))
-style.configure("TButton", font=("Arial", 12, "bold"), padding=10)
-style.configure("TEntry", font=("Arial", 12), padding=5)
+root.title("คำนวณดอกเบี้ยเงินฝาก")
+root.geometry("650x500")
+root.configure(bg="black")
 
-# Add a label for the program title at the top (centered)
-title_label = ttk.Label(root, text="Deposite Calculation", style="TLabel")
-title_label.grid(row=0, column=0, columnspan=2, pady=20, padx=10)
+main_frame = tk.Frame(root, bg="black")
+main_frame.pack(padx=40, pady=40, expand=True)
 
-# Add a label and entry for the capital amount
-label_capital = ttk.Label(root, text="กรอกจำนวนเงิน (บาท):")
-label_capital.grid(row=1, column=0, padx=10, pady=10, sticky="e")
-entry_capital = ttk.Entry(root, style="TEntry")
-entry_capital.grid(row=1, column=1, padx=10, pady=10)
+# ช่องกรอกจำนวนเงินต้น (ใช้ RainbowRoundedEntry)
+label_capital = tk.Label(main_frame, text="จำนวนเงินต้น (บาท):", bg="black", fg="white", font=("ไทยสารบัญ", 18))
+label_capital.grid(row=0, column=0, pady=10, sticky="w")
+rainbow_entry_capital = RainbowRoundedEntry(main_frame, width=250, height=50, corner_radius=15)
+rainbow_entry_capital.grid(row=0, column=1, pady=10, sticky="w", padx=10)
 
-# Add a label and entry for the 'time_in' date
-label_time_in = ttk.Label(root, text="เวลาที่นำเงินเข้า (วว/ดด/ปปปป):")
-label_time_in.grid(row=2, column=0, padx=10, pady=10, sticky="e")
-entry_time_in = ttk.Entry(root, style="TEntry")
-entry_time_in.grid(row=2, column=1, padx=10, pady=10)
+# ช่องเลือกวันที่นำเงินเข้า (ใช้ RainbowRoundedCombobox สำหรับวัน, เดือน, ปี)
+label_date_in = tk.Label(main_frame, text="วันที่นำเงินเข้า:", bg="black", fg="white", font=("ไทยสารบัญ", 18))
+label_date_in.grid(row=1, column=0, pady=10, sticky="w")
+frame_date_in = tk.Frame(main_frame, bg="black")
+frame_date_in.grid(row=1, column=1, pady=10, sticky="w", padx=10)
 
-# Add a label and entry for the 'time_out' date
-label_time_out = ttk.Label(root, text="เวลาที่นำเงินออก (วว/ดด/ปปปป):")
-label_time_out.grid(row=3, column=0, padx=10, pady=10, sticky="e")
-entry_time_out = ttk.Entry(root, style="TEntry")
-entry_time_out.grid(row=3, column=1, padx=10, pady=10)
+day_in_widget = RainbowRoundedCombobox(frame_date_in, values=[str(i) for i in range(1, 32)], width=80, height=60, corner_radius=15)
+day_in_widget.grid(row=0, column=0, padx=5)
+month_in_widget = RainbowRoundedCombobox(frame_date_in, values=[str(i) for i in range(1, 13)], width=80, height=60, corner_radius=15)
+month_in_widget.grid(row=0, column=1, padx=5)
+year_in_widget = RainbowRoundedCombobox(frame_date_in, values=[str(i) for i in range(1900, 2101)], width=130, height=60, corner_radius=15)
+year_in_widget.grid(row=0, column=2, padx=5)
 
-# Add a button to trigger the calculation
-calculate_button = ttk.Button(root, text="คำนวณ", command=calculate)
-calculate_button.grid(row=4, column=0, columnspan=2, pady=20)
+# ช่องเลือกวันที่นำเงินออก (ใช้ RainbowRoundedCombobox สำหรับวัน, เดือน, ปี)
+label_date_out = tk.Label(main_frame, text="วันที่นำเงินออก:", bg="black", fg="white", font=("ไทยสารบัญ", 18))
+label_date_out.grid(row=2, column=0, pady=10, sticky="w")
+frame_date_out = tk.Frame(main_frame, bg="black")
+frame_date_out.grid(row=2, column=1, pady=10, sticky="w", padx=10)
 
-# Add a label to show the result
-result_label = ttk.Label(root, text="ยอดเงินทั้งหมด: - บาท", style="TLabel")
-result_label.grid(row=5, column=0, columnspan=2, pady=10)
+day_out_widget = RainbowRoundedCombobox(frame_date_out, values=[str(i) for i in range(1, 32)], width=80, height=60, corner_radius=15)
+day_out_widget.grid(row=0, column=0, padx=5)
+month_out_widget = RainbowRoundedCombobox(frame_date_out, values=[str(i) for i in range(1, 13)], width=80, height=60, corner_radius=15)
+month_out_widget.grid(row=0, column=1, padx=5)
+year_out_widget = RainbowRoundedCombobox(frame_date_out, values=[str(i) for i in range(1900, 2101)], width=130, height=60, corner_radius=15)
+year_out_widget.grid(row=0, column=2, padx=5)
 
-# Start the GUI event loop
+# กำหนดค่าเริ่มต้นเป็นวันที่ปัจจุบัน
+now = datetime.now()
+day_in_widget.combobox.set(str(now.day))
+month_in_widget.combobox.set(str(now.month))
+year_in_widget.combobox.set(str(now.year))
+day_out_widget.combobox.set(str(now.day))
+month_out_widget.combobox.set(str(now.month))
+year_out_widget.combobox.set(str(now.year))
+
+update_day_options(day_in_widget, month_in_widget, year_in_widget)
+update_day_options(day_out_widget, month_out_widget, year_out_widget)
+
+# Bind event เมื่อมีการเลือกเดือนหรือปี
+month_in_widget.combobox.bind("<<ComboboxSelected>>", update_day_in)
+year_in_widget.combobox.bind("<<ComboboxSelected>>", update_day_in)
+month_out_widget.combobox.bind("<<ComboboxSelected>>", update_day_out)
+year_out_widget.combobox.bind("<<ComboboxSelected>>", update_day_out)
+
+# ปุ่มคำนวณ (ใช้ frame ที่มีความกว้างคงที่ 400px)
+calc_frame = tk.Frame(main_frame, width=400, bg="black")
+calc_frame.grid(row=3, column=0, columnspan=2, pady=20)
+calc_frame.grid_propagate(False)
+calc_button = tk.Button(calc_frame, text="คำนวณ", command=calculate_interest,
+                        bg="#4CAF50", fg="white", font=("ไทยสารบัญ", 18), relief="raised")
+calc_button.pack(expand=True, fill="both")
+
+# แสดงผลลัพธ์
+result_label = tk.Label(main_frame, text="", bg="black", fg="white", font=("ไทยสารบัญ", 18))
+result_label.grid(row=4, column=0, columnspan=2, pady=20)
+
+# แสดงหน้าต่างหลักหลังจากสร้าง UI เสร็จ
+root.deiconify()
 root.mainloop()
